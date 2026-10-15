@@ -1,221 +1,192 @@
-// North Star Bakery - Touchstone 4
+"use strict";
 
-// Product data
-const bakeryProducts = [
-    {
-        id: "bread",
-        name: "Artisan Bread"
-    },
-    {
-        id: "pastries",
-        name: "Fresh Pastries"
-    },
-    {
-        id: "cakes",
-        name: "Custom Cakes"
-    }
+// The sample menu.
+const products = [
+  {
+    id: "rustic",
+    name: "Rustic loaf",
+    category: "bread",
+    description: "Crusty bread for soups or sandwiches."
+  },
+  {
+    id: "sandwich",
+    name: "Sandwich bread",
+    category: "bread",
+    description: "A soft loaf for breakfast and lunch."
+  },
+  {
+    id: "croissant",
+    name: "Croissant",
+    category: "pastry",
+    description: "A flaky option for a morning treat."
+  },
+  {
+    id: "sweet",
+    name: "Sweet pastries",
+    category: "pastry",
+    description: "A selection to share with family and friends."
+  }
 ];
 
-// Load favorite products from localStorage
-function getFavorites() {
-    const savedFavorites = localStorage.getItem("bakeryFavorites");
+// IDs of products the visitor has saved.
+let favorites = [];
 
-    if (savedFavorites) {
-        return JSON.parse(savedFavorites);
-    }
+const storageKeys = {
+  favorites: "northStar.favorites",
+  category: "northStar.category"
+};
 
-    return [];
+let storageAvailable = true;
+
+// Read saved data safely.
+function readStored(key, fallback) {
+  try {
+    const saved = localStorage.getItem(key);
+
+    return saved === null ? fallback : JSON.parse(saved);
+  } catch (error) {
+    storageAvailable = false;
+    return fallback;
+  }
 }
 
+// Save data safely.
+function saveStored(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    storageAvailable = false;
+  }
 
-// Save favorites
-function saveFavorites(favorites) {
-    localStorage.setItem(
-        "bakeryFavorites",
-        JSON.stringify(favorites)
+  showStorageStatus();
+}
+
+function showStorageStatus() {
+  const status = document.querySelector("#storage-status");
+
+  if (!status) return;
+
+  status.textContent = storageAvailable
+    ? "Your favorites and filter are saved in this browser."
+    : "Browser storage is unavailable. Your choices may not be remembered.";
+}
+
+// Add or remove a favorite.
+function toggleFavorite(id) {
+  if (favorites.includes(id)) {
+    favorites = favorites.filter(item => item !== id);
+  } else {
+    favorites.push(id);
+  }
+
+  saveStored(storageKeys.favorites, favorites);
+  renderProducts();
+}
+
+// Display products that match the selected category.
+function renderProducts() {
+  const list = document.querySelector("#product-list");
+  const category = document.querySelector("#category");
+
+  if (!list || !category) return;
+
+  list.replaceChildren();
+
+  const matchingProducts = products.filter(product => {
+    return category.value === "all" ||
+      product.category === category.value;
+  });
+
+  matchingProducts.forEach(product => {
+    const card = document.createElement("article");
+    card.className = "menu-item";
+
+    const heading = document.createElement("h3");
+    heading.textContent = product.name;
+
+    const description = document.createElement("p");
+    description.textContent = product.description;
+
+    const button = document.createElement("button");
+    button.type = "button";
+
+    const isSaved = favorites.includes(product.id);
+
+    button.textContent = isSaved
+      ? "Remove from favorites"
+      : "Save favorite";
+
+    button.setAttribute("aria-pressed", String(isSaved));
+
+    button.setAttribute(
+      "aria-label",
+      `${isSaved ? "Remove" : "Save"} ${product.name} ` +
+      `${isSaved ? "from" : "to"} favorites`
     );
-}
 
-
-// Add or remove a favorite
-function toggleFavorite(productId) {
-
-    let favorites = getFavorites();
-
-    if (favorites.includes(productId)) {
-        favorites = favorites.filter(function (id) {
-            return id !== productId;
-        });
-    } else {
-        favorites.push(productId);
-    }
-
-    saveFavorites(favorites);
-    displayFavorites();
-}
-
-
-// Display favorites on Products page
-function displayFavorites() {
-
-    const favoritesList =
-        document.getElementById("favoritesList");
-
-    if (!favoritesList) {
-        return;
-    }
-
-    const favorites = getFavorites();
-
-    favoritesList.innerHTML = "";
-
-    if (favorites.length === 0) {
-        favoritesList.innerHTML =
-            "<li>No favorite products selected yet.</li>";
-        return;
-    }
-
-    favorites.forEach(function (productId) {
-
-        const product = bakeryProducts.find(function (item) {
-            return item.id === productId;
-        });
-
-        if (product) {
-            const listItem =
-                document.createElement("li");
-
-            listItem.textContent = product.name;
-
-            favoritesList.appendChild(listItem);
-        }
+    button.addEventListener("click", () => {
+      toggleFavorite(product.id);
     });
+
+    card.append(heading, description, button);
+    list.append(card);
+  });
+
+  updateSummary();
 }
 
+// Show the names and number of saved products.
+function updateSummary() {
+  const summary = document.querySelector("#favorite-summary");
 
-// Contact form validation
-function validateContactForm(event) {
+  const savedNames = products
+    .filter(product => favorites.includes(product.id))
+    .map(product => product.name);
 
-    event.preventDefault();
-
-    const name =
-        document.getElementById("name");
-
-    const email =
-        document.getElementById("email");
-
-    const message =
-        document.getElementById("message");
-
-    const nameError =
-        document.getElementById("nameError");
-
-    const emailError =
-        document.getElementById("emailError");
-
-    const messageError =
-        document.getElementById("messageError");
-
-    let isValid = true;
-
-    // Clear old messages
-    nameError.textContent = "";
-    emailError.textContent = "";
-    messageError.textContent = "";
-
-    // Required name check
-    if (name.value.trim() === "") {
-        nameError.textContent =
-            "Please enter your name.";
-
-        isValid = false;
-    }
-
-    // Email validation
-    if (
-        email.value.trim() === "" ||
-        !email.value.includes("@")
-    ) {
-        emailError.textContent =
-            "Please enter a valid email address.";
-
-        isValid = false;
-    }
-
-    // Message minimum length
-    if (message.value.trim().length < 10) {
-        messageError.textContent =
-            "Please enter at least 10 characters.";
-
-        isValid = false;
-    }
-
-    if (isValid) {
-
-        // Remember customer name
-        localStorage.setItem(
-            "bakeryCustomerName",
-            name.value
-        );
-
-        document.getElementById(
-            "formSuccess"
-        ).textContent =
-            "Thank you! Your message is ready to send.";
-
-        event.target.reset();
-    }
+  if (savedNames.length === 0) {
+    summary.textContent =
+      "No favorites saved yet. Choose something you would like to try.";
+  } else {
+    summary.textContent =
+      `Saved favorites (${savedNames.length}): ` +
+      savedNames.join(", ") + ".";
+  }
 }
 
+// Restore saved choices when the page opens.
+function setupProducts() {
+  const category = document.querySelector("#category");
 
-// Restore saved customer name
-function loadCustomerName() {
+  // Other pages may not contain the product finder.
+  if (!category) return;
 
-    const name =
-        document.getElementById("name");
+  const storedFavorites = readStored(storageKeys.favorites, []);
 
-    const savedName =
-        localStorage.getItem("bakeryCustomerName");
+  if (Array.isArray(storedFavorites)) {
+    favorites = [
+      ...new Set(
+        storedFavorites.filter(id => {
+          return products.some(product => product.id === id);
+        })
+      )
+    ];
+  }
 
-    if (name && savedName) {
-        name.value = savedName;
-    }
+  const storedCategory = readStored(storageKeys.category, "all");
+
+  const allowedCategories = ["all", "bread", "pastry"];
+
+  category.value = allowedCategories.includes(storedCategory)
+    ? storedCategory
+    : "all";
+
+  category.addEventListener("change", () => {
+    saveStored(storageKeys.category, category.value);
+    renderProducts();
+  });
+
+  renderProducts();
+  showStorageStatus();
 }
 
-
-// Page setup
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        displayFavorites();
-        loadCustomerName();
-
-        const favoriteButtons =
-            document.querySelectorAll(".favorite-button");
-
-        favoriteButtons.forEach(function (button) {
-
-            button.addEventListener(
-                "click",
-                function () {
-
-                    toggleFavorite(
-                        button.dataset.product
-                    );
-                }
-            );
-        });
-
-        const contactForm =
-            document.getElementById("contactForm");
-
-        if (contactForm) {
-
-            contactForm.addEventListener(
-                "submit",
-                validateContactForm
-            );
-        }
-    }
-);
+setupProducts();
